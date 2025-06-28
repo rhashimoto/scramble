@@ -1,13 +1,11 @@
-export {};
-
-const PASSWORD_SALT = new Uint32Array([0, 1, 2, 3]);
+const PASSWORD_SALT = new Uint32Array([0xb6db27dd, 0xa7e64336, 0x7ec91eba, 0x503563c3]);
 const PASSWORD_DIGESTS = new Set([
   'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',  // empty string (testing only)
   '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',  // 'password' (testing only)
   '9f4da28adb6ebdeeede0d057a11f85a4c74821ba2ed5963e6607765b25a59fa0',
 ]);
 
-const keyReady = new Promise((resolve, reject) => {
+new Promise((resolve, reject) => {
   let password = '';
   let nIterations = 1;
 
@@ -53,34 +51,34 @@ const keyReady = new Promise((resolve, reject) => {
 
   // @ts-ignore
   setupDialog.showModal();
-});
+}).then(key => {
+  document.getElementById('plaintext').addEventListener('input', async event => {
+    const textarea = /** @type {HTMLTextAreaElement} */(event.target);
+    const plaintext = textarea.value;
+    try {
+      const ciphertext = await encrypt(key, plaintext);
+      // @ts-ignore
+      document.getElementById('ciphertext').value = toBase64Url(ciphertext);
+    } catch (e) {
+      // @ts-ignore
+      document.getElementById('ciphertext').value = `Encryption failed: ${e.message}`;
+      console.error('Encryption failed:', e);
+    }
+  });
 
-document.getElementById('plaintext').addEventListener('input', async event => {
-  const textarea = /** @type {HTMLTextAreaElement} */(event.target);
-  const plaintext = textarea.value;
-  try {
-    const ciphertext = await encrypt(plaintext);
-    // @ts-ignore
-    document.getElementById('ciphertext').value = toBase64Url(ciphertext);
-  } catch (e) {
-    // @ts-ignore
-    document.getElementById('ciphertext').value = `Encryption failed: ${e.message}`;
-    console.error('Encryption failed:', e);
-  }
-});
-
-document.getElementById('ciphertext').addEventListener('input', async event => {
-  const textarea = /** @type {HTMLTextAreaElement} */(event.target);
-  const ciphertext = fromBase64Url(textarea.value);
-  try {
-    const plaintext = await decrypt(ciphertext);
-    // @ts-ignore
-    document.getElementById('plaintext').value = plaintext;
-  } catch (e) {
-    // @ts-ignore
-    document.getElementById('plaintext').value = `Decryption failed: ${e.message}`;
-    console.error('Decryption failed:', e);
-  }
+  document.getElementById('ciphertext').addEventListener('input', async event => {
+    const textarea = /** @type {HTMLTextAreaElement} */(event.target);
+    const ciphertext = fromBase64Url(textarea.value);
+    try {
+      const plaintext = await decrypt(key, ciphertext);
+      // @ts-ignore
+      document.getElementById('plaintext').value = plaintext;
+    } catch (e) {
+      // @ts-ignore
+      document.getElementById('plaintext').value = `Decryption failed: ${e.message}`;
+      console.error('Decryption failed:', e);
+    }
+  });
 });
 
 /**
@@ -128,10 +126,11 @@ const computeDigest = (function() {
 
 /**
  * Encrypt a string with AES-GCM.
+ * @param {CryptoKey} key The key to use for encryption.
  * @param {string} plaintext
  * @returns {Promise<string>} Encrypted string as base64.
  */
-async function encrypt(plaintext) {
+async function encrypt(key, plaintext) {
   // Generate random initialization vector.
   const iv = window.crypto.getRandomValues(new Uint8Array(12));
 
@@ -140,7 +139,7 @@ async function encrypt(plaintext) {
       name: 'AES-GCM',
       iv: iv,
     },
-    await keyReady,
+    key,
     new TextEncoder().encode(plaintext)
   );
 
@@ -150,17 +149,18 @@ async function encrypt(plaintext) {
 
 /**
  * Decrypt a string with AES-GCM.
+ * @param {CryptoKey} key The key to use for decryption.
  * @param {string} base64
  * @returns {Promise<string>} Decrypted string.
  */
-async function decrypt(base64) {
+async function decrypt(key, base64) {
   const ciphertext = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
   const plaintext = await window.crypto.subtle.decrypt(
     {
       name: 'AES-GCM',
       iv: ciphertext.slice(0, 12),
     },
-    await keyReady,
+    key,
     ciphertext.slice(12)
   );
   return new TextDecoder().decode(plaintext);
