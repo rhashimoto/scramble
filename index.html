@@ -1,36 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scramble</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 2em;
-        }
-        label {
-            display: block;
-            margin-top: 1em;
-        }
-        textarea {
-            width: 100%;
-            padding: 0.5em;
-            margin-top: 0.5em;
-            font-family: inherit;
-            font-size: 1em;
-            box-sizing: border-box;
-            height: 2in;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scramble</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2em;
+    }
+    label {
+      display: block;
+      margin-top: 1em;
+    }
+    textarea {
+      width: 100%;
+      padding: 0.5em;
+      margin-top: 0.5em;
+      font-family: fixed, monospace;
+      font-size: 1em;
+      box-sizing: border-box;
+      height: 2in;
+    }
+    input[type="password"] {
+      width: 20em;
+      max-width: 100%;
+    }
+    menu {
+      padding: 0;
+    }
+  </style>
+
+  <script src="scramble.js" type="module"></script>
 </head>
 <body>
-    <h1>Scramble</h1>
+  <h1>Scramble</h1>
 
-    <label for="plaintext">Plaintext</label>
-    <textarea id="plaintext" name="plaintext"></textarea>
+  <label for="plaintext">Plaintext</label>
+  <textarea id="plaintext" name="plaintext"></textarea>
 
-    <label for="crypttext">Crypttext</label>
-    <textarea id="crypttext" name="crypttext"></textarea>
+  <label for="ciphertext">Crypttext</label>
+  <textarea id="ciphertext" name="ciphertext"></textarea>
+
+  <dialog id="setup-dialog">
+    <form method="dialog">
+      <h2>Key derivation</h2>
+      Incognito mode recommended to avoid rogue extensions
+      accessing the password.
+
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password">
+
+      <label for="iterations">Derivation iterations</label>
+      <input type="number" id="iterations" name="iterations" min="1" value="1">
+
+      <menu>
+        <button id="derive-button" value="ok" disabled>OK</button>
+      </menu>
+    </form>
+  </dialog>
 </body>
 </html>
