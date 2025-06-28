@@ -1,0 +1,11 @@
+{
+  "name": "scramble",
+  "version": "1.0.0",
+  "description": "A WebCrypto encrypt/decrypt tool.",
+  "devDependencies": {
+    "@web/dev-server": "^0.4.6"
+  },
+  "scripts": {
+    "start": "web-dev-server --watch"
+  }
+}
