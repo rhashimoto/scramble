@@ -4,10 +4,17 @@ const PASSWORD_DIGESTS = new Set([
   '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',  // 'password' (testing only)
   '9f4da28adb6ebdeeede0d057a11f85a4c74821ba2ed5963e6607765b25a59fa0',
 ]);
+const PBKDF2_ITERATIONS = 8675309;
+
+const searchParams = new URLSearchParams(window.location.search);
+document.getElementById('ciphertext')
+  .setAttribute('value', searchParams.get('data') || '');
+
+const textEncoder = new TextEncoder();
 
 new Promise((resolve, reject) => {
   let password = '';
-  let nIterations = 1;
+  validate();
 
   document.getElementById('password').addEventListener('input', async event => {
     const input = /** @type {HTMLInputElement} */(event.target);
@@ -15,12 +22,6 @@ new Promise((resolve, reject) => {
 
     const digest = await computeDigest(password);
     console.log(`Password digest: ${digest}`);
-    validate();
-  });
-
-  document.getElementById('iterations').addEventListener('input', event => {
-    const input = /** @type {HTMLInputElement} */(event.target);
-    nIterations = Number(input.value);
     validate();
   });
 
@@ -34,20 +35,19 @@ new Promise((resolve, reject) => {
     
     event.preventDefault();
     try {
-      const key = await deriveKeyFromPassword(password, nIterations);
+      const key = await deriveKeyFromPassword(password, PBKDF2_ITERATIONS);
       resolve(key);
       setupDialog.close();
     } catch (e) {
       reject(e);
     } finally {
       /** @type {HTMLInputElement} */(document.getElementById('password')).value = '';
-      /** @type {HTMLInputElement} */(document.getElementById('iterations')).value = '1';
     }
   });
 
   async function validate() {
     const digest = await computeDigest(password);
-    deriveButton.disabled = !PASSWORD_DIGESTS.has(digest) || !(nIterations > 0);
+    deriveButton.disabled = !PASSWORD_DIGESTS.has(digest) && !searchParams.has('test');
   }
 
   // @ts-ignore
@@ -119,15 +119,12 @@ async function deriveKeyFromPassword(password, nIterations) {
  * @param {string} s The string to compute the digest from.
  * @returns {Promise<string>} Hex string of the digest.
  */
-const computeDigest = (function() {
-  const encoder = new TextEncoder();
-  return async function(s) {
-    const digest = await crypto.subtle.digest('SHA-256', encoder.encode(s));
-    return Array.from(new Uint8Array(digest))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
-  };
-})();
+async function computeDigest(s) {
+  const digest = await crypto.subtle.digest('SHA-256', textEncoder.encode(s));
+  return Array.from(new Uint8Array(digest))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
 
 /**
  * Encrypt a string with AES-GCM.
