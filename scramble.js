@@ -31,8 +31,6 @@ new Promise((resolve, reject) => {
 
   deriveButton.addEventListener('click', async event => {
     deriveButton.disabled = true;
-    /** @type {HTMLInputElement} */(document.getElementById('password')).value = '';
-    /** @type {HTMLInputElement} */(document.getElementById('iterations')).value = '1';
     
     event.preventDefault();
     try {
@@ -41,6 +39,9 @@ new Promise((resolve, reject) => {
       setupDialog.close();
     } catch (e) {
       reject(e);
+    } finally {
+      /** @type {HTMLInputElement} */(document.getElementById('password')).value = '';
+      /** @type {HTMLInputElement} */(document.getElementById('iterations')).value = '1';
     }
   });
 
@@ -51,17 +52,20 @@ new Promise((resolve, reject) => {
 
   // @ts-ignore
   setupDialog.showModal();
-}).then(key => {
+}).then((/** @type {CryptoKey} */ key) => {
+  const log = document.getElementById('log');
+
   document.getElementById('plaintext').addEventListener('input', async event => {
     const textarea = /** @type {HTMLTextAreaElement} */(event.target);
     const plaintext = textarea.value;
+    const output = /** @type {HTMLTextAreaElement} */(document.getElementById('ciphertext'));
+    log.textContent = '';
     try {
       const ciphertext = await encrypt(key, plaintext);
       // @ts-ignore
-      document.getElementById('ciphertext').value = toBase64Url(ciphertext);
+      output.value = toBase64Url(ciphertext);
     } catch (e) {
-      // @ts-ignore
-      document.getElementById('ciphertext').value = `Encryption failed: ${e.message}`;
+      log.textContent = `Encryption failed: ${e.message}`;
       console.error('Encryption failed:', e);
     }
   });
@@ -69,13 +73,14 @@ new Promise((resolve, reject) => {
   document.getElementById('ciphertext').addEventListener('input', async event => {
     const textarea = /** @type {HTMLTextAreaElement} */(event.target);
     const ciphertext = fromBase64Url(textarea.value);
+    const output = /** @type {HTMLTextAreaElement} */(document.getElementById('plaintext'));
+    log.textContent = '';
     try {
       const plaintext = await decrypt(key, ciphertext);
       // @ts-ignore
-      document.getElementById('plaintext').value = plaintext;
+      output.value = plaintext;
     } catch (e) {
-      // @ts-ignore
-      document.getElementById('plaintext').value = `Decryption failed: ${e.message}`;
+      log.textContent = `Decryption failed: ${e.message}`;
       console.error('Decryption failed:', e);
     }
   });

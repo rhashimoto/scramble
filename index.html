@@ -29,6 +29,9 @@
     menu {
       padding: 0;
     }
+    #log {
+      margin-top: 2em;
+    }
   </style>
 
   <script src="scramble.js" type="module"></script>
@@ -42,10 +45,12 @@
   <label for="ciphertext">Crypttext</label>
   <textarea id="ciphertext" name="ciphertext"></textarea>
 
+  <pre id="log"></pre>
+
   <dialog id="setup-dialog">
     <form method="dialog">
       <h2>Key derivation</h2>
-      Incognito mode recommended to avoid rogue extensions
+      Incognito mode is recommended to avoid rogue extensions
       accessing the password.
 
       <label for="password">Password</label>
