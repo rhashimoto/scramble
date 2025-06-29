@@ -14,59 +14,50 @@ const textEncoder = new TextEncoder();
 
 new Promise((resolve, reject) => {
   let password = '';
-  validate();
+
+  const deriveButton = /** @type {HTMLButtonElement} */
+    (document.getElementById('derive-button'));
 
   document.getElementById('password').addEventListener('input', async event => {
     const input = /** @type {HTMLInputElement} */(event.target);
     password = input.value;
 
-    const digest = await computeDigest(password);
-    console.log(`Password digest: ${digest}`);
-    validate();
+    deriveButton.disabled = !await isValidPassword(password);
   });
 
   const setupDialog = /** @type {HTMLDialogElement} */
     (document.getElementById('setup-dialog'));
-  const deriveButton = /** @type {HTMLButtonElement} */
-    (document.getElementById('derive-button'))
 
   deriveButton.addEventListener('click', async event => {
+    event.preventDefault();
     deriveButton.disabled = true;
     
-    event.preventDefault();
     try {
       const key = await deriveKeyFromPassword(password, PBKDF2_ITERATIONS);
       resolve(key);
       setupDialog.close();
     } catch (e) {
       reject(e);
+      log(`Key derivation failed: ${e.message}`);
     } finally {
       /** @type {HTMLInputElement} */(document.getElementById('password')).value = '';
     }
   });
 
-  async function validate() {
-    const digest = await computeDigest(password);
-    deriveButton.disabled = !PASSWORD_DIGESTS.has(digest) && !searchParams.has('test');
-  }
-
   // @ts-ignore
   setupDialog.showModal();
 }).then((/** @type {CryptoKey} */ key) => {
-  const log = document.getElementById('log');
-
   document.getElementById('plaintext').addEventListener('input', async event => {
     const textarea = /** @type {HTMLTextAreaElement} */(event.target);
     const plaintext = textarea.value;
     const output = /** @type {HTMLTextAreaElement} */(document.getElementById('ciphertext'));
-    log.textContent = '';
+    log();
     try {
       const ciphertext = await encrypt(key, plaintext);
       // @ts-ignore
       output.value = toBase64Url(ciphertext);
     } catch (e) {
-      log.textContent = `Encryption failed: ${e.message}`;
-      console.error('Encryption failed:', e);
+      log(`Encryption failed: ${e.message}`);
     }
   });
 
@@ -74,13 +65,13 @@ new Promise((resolve, reject) => {
     const textarea = /** @type {HTMLTextAreaElement} */(event.target);
     const ciphertext = fromBase64Url(textarea.value);
     const output = /** @type {HTMLTextAreaElement} */(document.getElementById('plaintext'));
-    log.textContent = '';
+    log();
     try {
       const plaintext = await decrypt(key, ciphertext);
       // @ts-ignore
       output.value = plaintext;
     } catch (e) {
-      log.textContent = `Decryption failed: ${e.message}`;
+      log(`Decryption failed: ${e.message}`);
       console.error('Decryption failed:', e);
     }
   });
@@ -115,15 +106,20 @@ async function deriveKeyFromPassword(password, nIterations) {
 }
 
 /**
- * Compute digest from string.
- * @param {string} s The string to compute the digest from.
- * @returns {Promise<string>} Hex string of the digest.
+ * @param {string} password
+ * @returns {Promise<boolean>} True if the password is valid, false otherwise.
  */
-async function computeDigest(s) {
-  const digest = await crypto.subtle.digest('SHA-256', textEncoder.encode(s));
-  return Array.from(new Uint8Array(digest))
+async function isValidPassword(password) {
+  const digest = await crypto.subtle.digest('SHA-256', textEncoder.encode(password));
+  const hex = Array.from(new Uint8Array(digest))
     .map(b => b.toString(16).padStart(2, '0'))
     .join('');
+
+  if (PASSWORD_DIGESTS.has(hex)) {
+    return true;
+  }
+  console.log(`Password digest: ${hex}`);
+  return searchParams.has('test');
 }
 
 /**
@@ -185,4 +181,12 @@ function toBase64Url(base64) {
 function fromBase64Url(base64url) {
   return base64url.replace(/-/g, '+').replace(/_/g, '/') +
    '=='.slice(0, (4 - base64url.length % 4) % 4);
+}
+
+function log(...args) {
+  const logElement = document.getElementById('log');
+  logElement.textContent = args.join(' ');
+  if (args.length > 0) {
+    console.log(...args);
+  }
 }
