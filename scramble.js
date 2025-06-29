@@ -64,6 +64,8 @@ new Promise((resolve, reject) => {
       history.replaceState({}, '', url.toString());
       log(`URL updated (${url.href.length} characters)`);
     } catch (e) {
+      output.value = '';
+      history.replaceState({}, '', location.pathname);
       log(`Encryption failed: ${e.message}`);
     }
   });
@@ -79,8 +81,8 @@ new Promise((resolve, reject) => {
         const plaintext = await decompressString(compressed);
         output.value = plaintext;
       } catch (e) {
+        output.value = '';
         log(`Decryption failed: ${e.message}`);
-        console.error('Decryption failed:', e);
       }
     }
   });
