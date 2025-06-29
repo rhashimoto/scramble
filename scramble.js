@@ -1,8 +1,8 @@
 const COMPRESSION_ALGORITHM = 'deflate';
 const PASSWORD_SALT = new Uint32Array([0xb6db27dd, 0xa7e64336, 0x7ec91eba, 0x503563c3]);
 const PASSWORD_DIGESTS = new Set([
-  'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',  // empty string (testing only)
-  '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',  // 'password' (testing only)
+  // 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',  // empty string (testing only)
+  // '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',  // 'password' (testing only)
   '9f4da28adb6ebdeeede0d057a11f85a4c74821ba2ed5963e6607765b25a59fa0',
 ]);
 const PBKDF2_ITERATIONS = 8675309;
