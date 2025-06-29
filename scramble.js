@@ -54,8 +54,12 @@ new Promise((resolve, reject) => {
     log();
     try {
       const ciphertext = await encrypt(key, plaintext);
-      // @ts-ignore
       output.value = toBase64Url(ciphertext);
+
+      // Update the URL with the ciphertext.
+      const url = new URL(location.href);
+      url.searchParams.set('data', output.value);
+      history.replaceState({}, '', url.toString());
     } catch (e) {
       log(`Encryption failed: ${e.message}`);
     }
