@@ -18,3 +18,5 @@ Thumbs.db
 
 # VSCode settings
 .vscode/
+
+.well-known/appspecific/com.chrome.devtools.json
