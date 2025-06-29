@@ -7,8 +7,8 @@ const PASSWORD_DIGESTS = new Set([
 const PBKDF2_ITERATIONS = 8675309;
 
 const searchParams = new URLSearchParams(window.location.search);
-document.getElementById('ciphertext')
-  .setAttribute('value', searchParams.get('data') || '');
+/** @type {HTMLTextAreaElement} */(document.getElementById('ciphertext')).value =
+  searchParams.get('data') || '';
 
 const textEncoder = new TextEncoder();
 
@@ -63,18 +63,21 @@ new Promise((resolve, reject) => {
 
   document.getElementById('ciphertext').addEventListener('input', async event => {
     const textarea = /** @type {HTMLTextAreaElement} */(event.target);
-    const ciphertext = fromBase64Url(textarea.value);
-    const output = /** @type {HTMLTextAreaElement} */(document.getElementById('plaintext'));
-    log();
-    try {
-      const plaintext = await decrypt(key, ciphertext);
-      // @ts-ignore
-      output.value = plaintext;
-    } catch (e) {
-      log(`Decryption failed: ${e.message}`);
-      console.error('Decryption failed:', e);
+    if (textarea.value) {
+      const ciphertext = fromBase64Url(textarea.value);
+      const output = /** @type {HTMLTextAreaElement} */(document.getElementById('plaintext'));
+      log();
+      try {
+        const plaintext = await decrypt(key, ciphertext);
+        output.value = plaintext;
+      } catch (e) {
+        log(`Decryption failed: ${e.message}`);
+        console.error('Decryption failed:', e);
+      }
     }
   });
+
+  document.getElementById('ciphertext').dispatchEvent(new Event('input'));
 });
 
 /**
