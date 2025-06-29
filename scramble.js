@@ -1,3 +1,4 @@
+const COMPRESSION_ALGORITHM = 'deflate';
 const PASSWORD_SALT = new Uint32Array([0xb6db27dd, 0xa7e64336, 0x7ec91eba, 0x503563c3]);
 const PASSWORD_DIGESTS = new Set([
   'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',  // empty string (testing only)
@@ -53,13 +54,15 @@ new Promise((resolve, reject) => {
     const output = /** @type {HTMLTextAreaElement} */(document.getElementById('ciphertext'));
     log();
     try {
-      const ciphertext = await encrypt(key, plaintext);
+      const compressed = await compressString(plaintext);
+      const ciphertext = await encrypt(key, compressed);
       output.value = toBase64Url(ciphertext);
 
       // Update the URL with the ciphertext.
       const url = new URL(location.href);
       url.searchParams.set('data', output.value);
       history.replaceState({}, '', url.toString());
+      log(`URL updated (${url.href.length} characters)`);
     } catch (e) {
       log(`Encryption failed: ${e.message}`);
     }
@@ -72,7 +75,8 @@ new Promise((resolve, reject) => {
       const output = /** @type {HTMLTextAreaElement} */(document.getElementById('plaintext'));
       log();
       try {
-        const plaintext = await decrypt(key, ciphertext);
+        const compressed = await decrypt(key, ciphertext);
+        const plaintext = await decompressString(compressed);
         output.value = plaintext;
       } catch (e) {
         log(`Decryption failed: ${e.message}`);
@@ -130,10 +134,58 @@ async function isValidPassword(password) {
 }
 
 /**
- * Encrypt a string with AES-GCM.
+ * Compress a string using the Compression Streams API.
+ * @param {string} s 
+ * @returns {Promise<ArrayBuffer>} Compressed string as an ArrayBuffer.
+ */
+async function compressString(s) {
+  const chunks = [];
+  await new ReadableStream({
+    start(controller) {
+        controller.enqueue(textEncoder.encode(s));
+        controller.close();
+    }
+  }).pipeThrough(
+    new CompressionStream(COMPRESSION_ALGORITHM)
+  ).pipeTo(
+    new WritableStream({
+      write(chunk) {
+        chunks.push(chunk);
+      }
+    })
+  );
+  return new Blob(chunks).arrayBuffer();
+}
+
+/**
+ * Decompress a string using the Compression Streams API.
+ * @param {ArrayBuffer} buffer
+ * @returns {Promise<string>} Decompressed string.
+ */
+async function decompressString(buffer) {
+  const chunks = [];
+  await new ReadableStream({
+    start(controller) {
+      controller.enqueue(buffer);
+      controller.close();
+    }
+  }).pipeThrough(
+    new DecompressionStream(COMPRESSION_ALGORITHM)
+  ).pipeTo(
+    new WritableStream({
+      write(chunk) {
+        chunks.push(chunk);
+      }
+    })
+  );
+  return new Blob(chunks).text();
+}
+
+/**
+ * Encrypt with AES-GCM.
  * @param {CryptoKey} key The key to use for encryption.
- * @param {string} plaintext
- * @returns {Promise<string>} Encrypted string as base64.
+ * @param {ArrayBuffer} plaintext
+ * @returns {Promise<string>} Encrypted data as base64.
  */
 async function encrypt(key, plaintext) {
   // Generate random initialization vector.
@@ -145,7 +197,7 @@ async function encrypt(key, plaintext) {
       iv: iv,
     },
     key,
-    new TextEncoder().encode(plaintext)
+    plaintext
   );
 
   // Prepend the IV to the ciphertext.
@@ -153,10 +205,10 @@ async function encrypt(key, plaintext) {
 };
 
 /**
- * Decrypt a string with AES-GCM.
+ * Decrypt with AES-GCM.
  * @param {CryptoKey} key The key to use for decryption.
  * @param {string} base64
- * @returns {Promise<string>} Decrypted string.
+ * @returns {Promise<ArrayBuffer>} Decrypted data.
  */
 async function decrypt(key, base64) {
   const ciphertext = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
@@ -168,7 +220,7 @@ async function decrypt(key, base64) {
     key,
     ciphertext.slice(12)
   );
-  return new TextDecoder().decode(plaintext);
+  return plaintext
 }
 
 /**
